@@ -1,16 +1,63 @@
 import pytest
-from api_activity.app import app
+
+from api_activity.app import app, create_app
 
 
 @pytest.fixture
+
+
+
 def client():
-    with app.test_client() as client:
+    with create_app().test_client() as client:
         yield client
 
 def test_hello(client):
     response = client.get('/')
+    assert response.status_code == 200    
+        
+def test_profile_requires_auth(client):
+    response = client.get('/profile', base_url="https://localhost")
+    assert response.status_code == 401
+
+
+def test_profile_with_valid_auth(client):
+    client.put(
+        '/register',
+        json={"username": "testuser", "password": "testpass123"},
+        base_url="https://localhost",
+    )
+    response = client.get(
+        '/profile',
+        auth=("testuser", "testpass123"),
+        base_url="https://localhost",
+    )
     assert response.status_code == 200
-    assert response.json == {"message": "Hello World!"}        
+    assert "testuser" in response.json["message"]
+
+
+def test_own_endpoint_requires_auth(client):
+    response = client.get('/own-endpoint', base_url="https://localhost")
+    assert response.status_code == 401
+
+def test_own_endpoint_with_valid_auth(client):
+    client.put(
+        '/register',
+        json={"username": "testuser", "password": "testpass123"},
+        base_url="https://localhost",
+    )
+    response = client.get(
+        '/own-endpoint',
+        auth=("testuser", "testpass123"),
+        base_url="https://localhost",
+    )
+    assert response.status_code == 200
+    assert "testuser" in response.json["message"]
+
+
+
+
+
+
 
 def test_square(client):
     response = client.get('/square/5')
